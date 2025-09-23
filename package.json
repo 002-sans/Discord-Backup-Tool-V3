@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "discord.js-selfbot-v13": "^3.7.0",
+    "gradient-string": "2.0.2"
+  }
+}
