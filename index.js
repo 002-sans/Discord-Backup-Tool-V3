@@ -16,10 +16,76 @@ if (!config.token)
 
 
 
+/**
+ * @param {string} token The token of the selfbot
+ * @description Connect the token to the script
+ * @example selfbot_main("Your token here");
+ * @returns {void}
+*/
+function selfbot_main(token){
+    let dots = '';
+    let counter = 0;
+
+    logo();
+    console.log(gradient(color())('\n>> Connexion en cours'));
+
+    const connexion_interval = setInterval(() => {
+        dots = '.'.repeat(counter % 4);
+        process.stdout.write(`\r>> Connexion en cours${dots}   `);
+        counter++;
+    }, 500);
+
+    const client = new Selfbot.Client({ presence: { status: 'invisible' } });
+    client.login(token);
+
+    client.on('ready', () => {
+        clearInterval(connexion_interval);
+        main_selfbot(client);
+    });
+}
+
+
 
 
 
 // Functions
+
+
+/**
+ * @param {Selfbot.Client} client The client of the selfbot
+ * @description The main function of the selfbot's client
+ * @example const selfbot = new Selfbot.Client(); 
+ * selfbot.login("TOKEN"); 
+ * selfbot.once('ready', () => main_selfbot(selfbot));
+*/
+function main_selfbot(client){
+    logo();
+
+    console.log(gradient(color())(`    
+                        [1] - Créé Une Backup"
+                        [2] - Créé Une Backup (Sans Chargement)
+                        [3] - Créé Une Backup Des Emotes
+                        [4] - Créé Une Backup (Avec les Messages)
+                        [5] - Charger une Backup
+                        [6] - Supprime Les Tickets (Par nom)
+                        [7] - Supprime Les Tickets (d'une Categorie)
+                        [8] - Créé Un Modèle (Besoin de Permissions)
+                        [9] - Affiche La Liste Des Backups
+                        [0] - Fermer`
+    ))
+  
+    input.question(c(color())("Quel est votre Choix ? : "), async choix_menu => {
+
+        switch(choix_menu){
+            default:
+                console.log(gradient(color())("[!] Choix Invalide"));
+                await sleep(2000);
+                main_selfbot(client);  
+        }
+
+    })
+}
+
 
 /**
  * @returns {void}
