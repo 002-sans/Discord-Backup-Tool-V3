@@ -7,8 +7,11 @@ const gradient = require('gradient-string');
 const readline = require("node:readline");
 const input = readline.createInterface({ input: process.stdin, output: process.stdout });
 
+const bot_backup = require('@outwalk/discord-backup');
+const selfbot_backup = require('discord.js-backup-v13');
+
 const fs = require('node:fs');
-//const fetch = require('node-fetch') // If you wanna activate node-fetch and do NPM I NODE-FTCH@cjs remove the first // in this line
+//const fetch = require('node-fetch') // If you wanna activate node-fetch and do NPM I NODE-FETCH@cjs remove the first // in this line
 
 if (!config.token) 
     return wait_for_token();
@@ -62,7 +65,7 @@ function main_selfbot(client){
     logo();
 
     console.log(gradient(color())(`    
-                        [1] - Créé Une Backup"
+                        [1] - Créé Une Backup
                         [2] - Créé Une Backup (Sans Chargement)
                         [3] - Créé Une Backup Des Emotes
                         [4] - Créé Une Backup (Avec les Messages)
@@ -74,17 +77,33 @@ function main_selfbot(client){
                         [0] - Fermer`
     ))
   
-    input.question(c(color())("Quel est votre Choix ? : "), async choix_menu => {
+    input.question(gradient(color())("Quel est votre Choix ? : "), async choix_menu => {
 
         switch(choix_menu){
             default:
                 console.log(gradient(color())("[!] Choix Invalide"));
                 await sleep(2000);
                 main_selfbot(client);  
+                break;
+
+            case 1:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+                })
+                break;
         }
 
+
+
+        async function error(error){
+            console.log(gradient(color())(error));
+            await sleep(2000);
+            return main_selfbot(client);
+        }
     })
 }
+
 
 
 /**
