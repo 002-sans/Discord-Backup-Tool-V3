@@ -93,6 +93,7 @@ function main_selfbot(client){
                         [8]  - Supprime Les Tickets (d'une Categorie)
                         [9]  - Créé Un Modèle (Besoin de Permissions)
                         [10] - Affiche La Liste Des Backups
+                        [11] - Settings
                         [0]  - Fermer`
     ))
   
@@ -104,6 +105,12 @@ function main_selfbot(client){
                 await sleep(2000);
                 main_selfbot(client);  
                 break;
+
+            case 0:
+                logo();
+                console.log(gradient(color())(`\n\nMerci d'avoir utilisé mon tool`));
+                input.close();
+                process.exit(0);
 
             case 1:
                 input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
