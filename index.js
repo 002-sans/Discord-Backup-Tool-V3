@@ -296,7 +296,7 @@ function main_selfbot(client){
 
             case 9:
                 input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) //|| client.guilds.fetch(server_id).catch(() => null);
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
                     if (!guild.members.me.permissions.has("MANAGE_GUILD"))
@@ -307,6 +307,28 @@ function main_selfbot(client){
 
                     input.question(gradient(color()(`Template crée: ${template?.url ?? 'url non crée'}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
                 })
+                break;
+
+            case 10:
+                const list = await selfbot_backup.list();
+
+                const backupFetched = await Promise.all(list.map(id => backup.fetch(id)));
+
+                const backupInfos = backupFetched
+                    .sort((a, b) => a.data.name.localeCompare(b.data.name))
+                    .map(e => `\`${e.data.name}\` ➜ ${e.id}`)
+                    .join('\n');
+
+                const backupemotes = fs.readdirSync('./emotes/')
+                    .filter(file => file.endsWith('.json'))
+                    .map(file => {
+                        const { name, id } = require(`./emotes/${file}`);
+                        return `${name} ➜ ${id}`;
+                    })
+                    .join('\n');
+
+                console.log(gradient(color())(`Backups Serveurs: \n${backupInfos}\n\nBackups Emojis: ${backupemotes}`));
+                break;
         }
 
 
