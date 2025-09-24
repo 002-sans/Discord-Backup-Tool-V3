@@ -200,11 +200,11 @@ function main_selfbot(client){
 
             case 6:
                 input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id)// || client.guilds.fetch(server_id).catch(() => null);
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
                     input.question(gradient(color())(`Entrez l'ID de la backup : `), async backupId => {
-                        if (fs.existsSync(`backups/selfbot/emojis/${backupId}.json`)){
+                        if (fs.existsSync(`./backups/selfbot/emojis/${backupId}.json`)){
                             if (!guild.members.me.permissions.has("CREATE_GUILD_EXPRESSIONS"))
                                 return error("Vous n'avez pas les permissions requises");
 
@@ -220,15 +220,93 @@ function main_selfbot(client){
                                         await sleep(500);
                                     } catch (e) { console.log(gradient(color())(`Emoji ${emoji.name} non effectuée: ${e}`)) }
                                 }
-                                main_selfbot(client);
+                                input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
                             })
+                        }
+                        else if (fs.existsSync(`./backups/selfbot/serveurs/${backupId}.json`)){
+                            if (!guild.members.me.permissions.has("ADMINISTRATOR"))
+                                return error("Vous n'avez pas les permissions requises");
+
+                            console.log(gradient(color())(`Chargement de la backup en cours...`));
+                            await selfbot_backup.load(backupId, guild);
+                            input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
                         }
                     })
                 })
                 break;
 
             case 7:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
 
+                    input.question(gradient(color())(`Entrez le nom des salons à supprimer : `), async channelName => {
+                        
+                        if (!channelName)
+                            return error("Veuillez entrer un nom de salon valide");
+                        
+                        if (!guild.members.me.permissions.has("MANAGE_CHANNELS"))
+                            return error("Vous n'avez pas les permissions requises");
+
+                        for (const channel of guild.channels.cache.filter(c => c.name.toLowerCase().includes(channelName.toLowerCase())).values()){
+                            try {
+                                await channel.delete()
+                                console.log(gradient(color())(`${channel.name} a été supprimé`))
+                            } catch (e) { console.log(gradient(color())(`${channel.name} n'a pas pu être supprimé: ${e}`)) }
+                        }
+                        input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                    })
+                })
+                break;
+
+            case 8:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    input.question(gradient(color())(`Entrez l'ID de la catégorie : `), async channel_id => {
+                        
+                        if (!channel_id)
+                            return error("Veuillez entrer un ID de catégorie valide");
+                        
+                        if (!guild.members.me.permissions.has("MANAGE_CHANNELS"))
+                            return error("Vous n'avez pas les permissions requises");
+
+                        const categorie = guild.channels.cache.get(channel_id) || await guild.channels.fetch(channel_id).catch(() => null);
+                        
+                        if (!categorie) 
+                            return error(`Aucune catégorie n'a été trouvé pour l'ID ${channel_id}`);
+
+                        if (categorie.type !== "GUILD_CATEGORY")
+                            return error(`${categorie.name} n'est pas une catégorie`);
+
+                        if (!categorie.children || !categorie.children.size)
+                            return error(`${categorie.name} n'a pas de salons`);
+
+                        for (const channel of categorie.children.values()){
+                            try {
+                                await channel.delete()
+                                console.log(gradient(color())(`${channel.name} a été supprimé`))
+                            } catch (e) { console.log(gradient(color())(`${channel.name} n'a pas pu être supprimé: ${e}`)) }
+                        }
+                        input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                    })
+                })
+                break;
+
+            case 9:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) //|| client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    if (!guild.members.me.permissions.has("MANAGE_GUILD"))
+                        return error("Vous n'avez pas les permissions requises");
+
+                    let template = await guild.createTemplate(guild.name, `https://github.com/002-sans/Discord-Backup-Tool-V3`).catch(() => null);
+                    if (!template) template = await guild.fetchTemplates().catch(() => null);
+
+                    input.question(gradient(color()(`Template crée: ${template?.url ?? 'url non crée'}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                })
         }
 
 
