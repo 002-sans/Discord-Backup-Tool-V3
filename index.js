@@ -1,3 +1,7 @@
+const { pipeline } = require('node:stream');
+const { promisify } = require('node:util');
+const pipelineAsync = promisify(pipeline);
+
 const Discord = require('discord.js');
 const Selfbot = require('discord.js-selfbot-v13');
 
@@ -13,8 +17,8 @@ const selfbot_backup = require('discord.js-backup-v13');
 const fs = require('node:fs');
 //const fetch = require('node-fetch') // If you wanna activate node-fetch and do NPM I NODE-FETCH@cjs remove the first // in this line
 
-[ './backups', './backups/selfbot', './backups/bot' ]
-    .forEach(dir => fs.existsSync(dir) ? fs.mkdirSync(dir) : void(0));
+[ './backups', './backups/selfbot', './backups/selfbot/emojis', './backups/selfbot/serveurs', './backups/bot', './backups/bot/serveurs', './backups/bot/emojis' ]
+    .forEach(dir => fs.existsSync(dir) ? void(0) : fs.mkdirSync(dir));
 
 
 if (!config.token) 
@@ -105,6 +109,7 @@ function main_selfbot(client){
                     const new_guild = await client.guilds.create(guild.name).catch(() => false);
                     if (!new_guild) return error('Création de serveur impossible');
 
+                    console.log(gradient(color())(`Chargement de la backup de ${guild.name} en cours..`))
                     await selfbot_backup.load(created_backup, new_guild);
                     main_selfbot(client);
                 })
@@ -125,10 +130,114 @@ function main_selfbot(client){
                 break;
 
             case 3:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    const emojis = await guild.emojis.fetch().catch(() => null);
+                    if (!emojis) return error("Impossible de récupérer les emojis du serveur");
+                    if (!emojis.size) return error(`${guild.name} n'a aucun emoji`);
+
+                    const data = {
+                        name: guild.name,
+                        guild_id: guild.id,
+                        date: Date.now(),
+                        id: Array.from({length: 8}, () => Math.floor(Math.random() * 10)).join(''),
+                        emojis: guild.emojis.cache.map(r => ({ link: `https://cdn.discordapp.com/emojis/${r.id}.${r.animated ? 'gif' : 'png'}`, name: r.name }))
+                    }
+
+                    fs.writeFileSync(`./backups/selfbot/emojis/${data.id}.json`, JSON.stringify(data, null, 4));
+                    input.question(gradient(color()(`Backup des emojis du serveur ${guild.name} crée: ${data.id}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                })
+                break;
+
+            case 4:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    const emojis = await guild.emojis.fetch().catch(() => null);
+                    if (!emojis) return error("Impossible de récupérer les emojis du serveur");
+                    if (!emojis.size) return error(`${guild.name} n'a aucun emoji`);
+
+                    fs.mkdirSync(guild.name);
+                    for (const emoji of guild.emojis.cache.values()) {
+
+                        const response = await fetch(`https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}`).catch(() => false);
+                        if (!response.ok) return;
+                    
+                        await pipelineAsync(response.body, fs.createWriteStream(`./${guild.name}/${emoji.name}.${emoji.animated ? 'gif' : 'png'}`));        
+                    }
+
+                    input.question(gradient(color()(`Téléchargement des emojis du serveur ${guild.name} crée\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                })
+                break;
+
+            case 5:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    input.question(gradient(color())(`Combien de messages par salons voulez-vous (max 100) : `), async maxMessagesPerChannel => {
+                        if (typeof maxMessagesPerChannel !== "number" || maxMessagesPerChannel < 0 || maxMessagesPerChannel > 100) 
+                            return error("Veuillez entrer un nombre valide entre 0 et 100");
+
+                        const created_backup = await selfbot_backup
+                            .create(guild, { maxMessagesPerChannel, doNotBackup: [ 'bans', 'emojis' ] })
+                            .catch(() => null);
+
+                        if (!created_backup) return error("Création de la backup impossible");
+                        
+                        const new_guild = await client.guilds.create(guild.name).catch(() => false);
+                        if (!new_guild) return error('Création de serveur impossible');
+
+                        console.log(gradient(color())(`Chargement de la backup de ${guild.name} en cours..`))
+                        await selfbot_backup.load(created_backup, new_guild);
+                        main_selfbot(client);
+                    })
+                })
+                break;
+
+            case 6:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id)// || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    input.question(gradient(color())(`Entrez l'ID de la backup : `), async backupId => {
+                        if (fs.existsSync(`backups/selfbot/emojis/${backupId}.json`)){
+                            if (!guild.members.me.permissions.has("CREATE_GUILD_EXPRESSIONS"))
+                                return error("Vous n'avez pas les permissions requises");
+
+                            input.question(gradient(color())("Voulez vous supprimer les emojis (y/n) : "), async delete_emoji => {
+                                if (delete_emoji && delete_emoji.toLowerCase() == 'y')
+                                    guild.emojis.cache.forEach(emoji => emoji.delete().catch(() => false));
+
+                                const emojiData = require(`./backups/selfbot/emojis/${backupId}.json`);
+                                for (const emoji of emojiData.emojis.values()){
+                                    try {
+                                        await guild.emojis.create(emoji.link, emoji.name);
+                                        console.log(gradient(color())(`Emoji ${emoji.name} crée`))
+                                        await sleep(500);
+                                    } catch (e) { console.log(gradient(color())(`Emoji ${emoji.name} non effectuée: ${e}`)) }
+                                }
+                                main_selfbot(client);
+                            })
+                        }
+                    })
+                })
+                break;
+
+            case 7:
+
         }
 
 
-
+        /**
+         * @description Display an error
+         * @param {string} error The error to display in the console
+         * @returns {void}
+         * @example error("Just an error");
+        */
         async function error(error){
             console.log(gradient(color())(error));
             await sleep(2000);
