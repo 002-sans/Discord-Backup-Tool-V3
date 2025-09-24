@@ -22,8 +22,18 @@ const fs = require('node:fs');
 
 
 if (!config.token) 
-    return wait_for_token();
-
+    return connectBot();
+else {
+    const type = checkTokenType(config.token).then(r => r);
+    switch(type){
+        default:
+            return connectBot()
+        case 1:
+            return selfbot_main(config.token);
+        case 2:
+            return //a faire
+    }
+}
 
 
 
@@ -393,7 +403,7 @@ async function sleep(ms){
 */
 function logo() {
     console.clear();
-    console.log(gradient(color())(`
+    console.log(gradient(color()).multiline(`
                 ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
                 ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     
                 ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝       ██║   ██║   ██║██║   ██║██║     
@@ -404,47 +414,64 @@ function logo() {
 
 
 /**
- * @returns {Promise<boolean>}
- * @example await wait_for_token();
- * @description Vérifie si le token est valide (bot ou selfbot)
+ * Connect the token to the tool
+ * @returns {void}
  */
-async function wait_for_token() {
-    return new Promise((resolve) => {
-        logo()
-        input.question(gradient(color())("\n\n>> Entrez votre token : "), async token => {
-            const api = 'https://discord.com/api/v9/users/@me';
-            const headers = { 'Authorization': token }
-            try {
-                let res = await fetch(api, headers);
+async function connectBot() {
+    logo();
+    input.question(gradient(color())("\n\n>> Entrez votre token : "), async token => {
+        const type = await checkTokenType(token);
 
-                if (res.ok) {
-                    console.log(gradient(color())("[INFO] Token utilisateur valide."));
-                    config.token = token;
-                    fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
-                    selfbot_main(token);
-                    return resolve(true);
-                }
+        switch (type) {
+            case 1:
+                console.log(gradient(color())("[INFO] Token utilisateur valide."));
+                config.token = token;
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                selfbot_main(token);
+                break;
 
-                headers["Authorization"] = `Bot ${token}`
-                res = await fetch(api, headers);
+            case 2:
+                console.log(gradient(color())("[INFO] Token bot valide."));
+                config.token = token;
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                // Ajoute ici ton bot_main() si tu as une fonction dédiée pour bots
+                break;
 
-                if (res.ok) {
-                    console.log(gradient(color())("[INFO] Token bot valide."));
-                    config.token = token;
-                    fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
-                    return resolve(true);
-                }
-
+            default:
                 console.log(gradient(color())("[ERREUR] Token invalide."));
                 await sleep(2000);
-                resolve(false);
-                wait_for_token();
-            } catch (err) {
-                console.log(gradient(color())("[ERREUR] Une erreur s'est produite : "), err.message);
-                await sleep(2000);
-                resolve(false);
-                wait_for_token();
-            }
-        });
+                connectBot();
+                break;
+        }
     });
+}
+
+
+
+/**
+ * Check if the token is a user or a bot
+ * @param {string} token
+ * @returns {Promise<number>} 1 = user, 2 = bot, 0 = invalide
+ */
+async function checkTokenType(token) {
+    const api = 'https://discord.com/api/v9/users/@me';
+
+    try {
+        let res = await fetch(api, {
+            headers: { 'Authorization': token }
+        });
+
+        if (res.ok) return 1;
+
+        res = await fetch(api, {
+            headers: { 'Authorization': `Bot ${token}` }
+        });
+
+        if (res.ok) return 2;
+
+        return 0;
+    } catch (err) {
+        console.error("[ERREUR] Une erreur s'est produite :", err.message);
+        return 0;
+    }
 }
