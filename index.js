@@ -13,6 +13,10 @@ const selfbot_backup = require('discord.js-backup-v13');
 const fs = require('node:fs');
 //const fetch = require('node-fetch') // If you wanna activate node-fetch and do NPM I NODE-FETCH@cjs remove the first // in this line
 
+[ './backups', './backups/selfbot', './backups/bot' ]
+    .forEach(dir => fs.existsSync(dir) ? fs.mkdirSync(dir) : void(0));
+
+
 if (!config.token) 
     return wait_for_token();
 
@@ -65,16 +69,17 @@ function main_selfbot(client){
     logo();
 
     console.log(gradient(color())(`    
-                        [1] - Créé Une Backup
-                        [2] - Créé Une Backup (Sans Chargement)
-                        [3] - Créé Une Backup Des Emotes
-                        [4] - Créé Une Backup (Avec les Messages)
-                        [5] - Charger une Backup
-                        [6] - Supprime Les Tickets (Par nom)
-                        [7] - Supprime Les Tickets (d'une Categorie)
-                        [8] - Créé Un Modèle (Besoin de Permissions)
-                        [9] - Affiche La Liste Des Backups
-                        [0] - Fermer`
+                        [1]  - Créé Une Backup
+                        [2]  - Créé Une Backup (Sans Chargement)
+                        [3]  - Créé Une Backup Des Emotes
+                        [4]  - Télécharger des emotes
+                        [5]  - Créé Une Backup (Avec les Messages)
+                        [6]  - Charger une Backup
+                        [7]  - Supprime Les Tickets (Par nom)
+                        [8]  - Supprime Les Tickets (d'une Categorie)
+                        [9]  - Créé Un Modèle (Besoin de Permissions)
+                        [10] - Affiche La Liste Des Backups
+                        [0]  - Fermer`
     ))
   
     input.question(gradient(color())("Quel est votre Choix ? : "), async choix_menu => {
@@ -87,11 +92,39 @@ function main_selfbot(client){
                 break;
 
             case 1:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), server_id => {
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
                     const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
+
+                    const created_backup = await selfbot_backup
+                        .create(guild, { maxMessagesPerChannel: 0, doNotBackup: [ 'bans', 'emojis' ] })
+                        .catch(() => null);
+
+                    if (!created_backup) return error("Création de la backup impossible");
+                    
+                    const new_guild = await client.guilds.create(guild.name).catch(() => false);
+                    if (!new_guild) return error('Création de serveur impossible');
+
+                    await selfbot_backup.load(created_backup, new_guild);
+                    main_selfbot(client);
                 })
                 break;
+
+            case 2:
+                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                    if (!guild) return error("Aucun serveur de trouvé");
+
+                    const created_backup = await selfbot_backup
+                        .create(guild, { maxMessagesPerChannel: 0, doNotBackup: [ 'bans', 'emojis' ] })
+                        .catch(() => null);
+
+                    if (!created_backup) return error("Création de la backup impossible");
+                    input.question(gradient(color()(`Backup du serveur ${guild.name} crée: ${created_backup.id}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                })
+                break;
+
+            case 3:
         }
 
 
@@ -152,12 +185,12 @@ async function sleep(ms){
 function logo() {
     console.clear();
     console.log(gradient(color())(`
-        ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
-        ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     
-        ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝       ██║   ██║   ██║██║   ██║██║     
-        ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝        ██║   ██║   ██║██║   ██║██║     
-        ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║            ██║   ╚██████╔╝╚██████╔╝███████╗
-        ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝            ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝`))
+                ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
+                ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     
+                ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝       ██║   ██║   ██║██║   ██║██║     
+                ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝        ██║   ██║   ██║██║   ██║██║     
+                ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║            ██║   ╚██████╔╝╚██████╔╝███████╗
+                ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝            ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝`))
 }
 
 
@@ -168,8 +201,8 @@ function logo() {
  */
 async function wait_for_token() {
     return new Promise((resolve) => {
-        console.clear();
-        input.question(gradient(color())(">> Entrez votre token : "), async token => {
+        logo()
+        input.question(gradient(color())("\n\n>> Entrez votre token : "), async token => {
             const api = 'https://discord.com/api/v9/users/@me';
             const headers = { 'Authorization': token }
             try {
@@ -179,6 +212,7 @@ async function wait_for_token() {
                     console.log(gradient(color())("[INFO] Token utilisateur valide."));
                     config.token = token;
                     fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                    selfbot_main(token);
                     return resolve(true);
                 }
 
