@@ -2,8 +2,8 @@ const { pipeline } = require('node:stream');
 const { promisify } = require('node:util');
 const pipelineAsync = promisify(pipeline);
 
-const Discord = require('discord.js');
 const Selfbot = require('discord.js-selfbot-v13');
+const selfbot_backup = require('discord.js-backup-v13');
 
 const config = require('./config.json');
 const gradient = require('gradient-string');
@@ -11,28 +11,29 @@ const gradient = require('gradient-string');
 const readline = require("node:readline");
 const input = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-const bot_backup = require('@outwalk/discord-backup');
-const selfbot_backup = require('discord.js-backup-v13');
-
 const fs = require('node:fs');
+const spaces = 44;
+
 //const fetch = require('node-fetch') // If you wanna activate node-fetch and do NPM I NODE-FETCH@cjs remove the first // in this line
 
-[ './backups', './backups/selfbot', './backups/selfbot/emojis', './backups/selfbot/serveurs', './backups/bot', './backups/bot/serveurs', './backups/bot/emojis' ]
+[ './backups', './backups/selfbot', './backups/selfbot/emojis', './backups/selfbot/serveurs' ]
     .forEach(dir => fs.existsSync(dir) ? void(0) : fs.mkdirSync(dir));
 
 
 if (!config.token) 
     return connectBot();
 else {
-    const type = checkTokenType(config.token).then(r => r);
-    switch(type){
-        default:
-            return connectBot()
-        case 1:
-            return selfbot_main(config.token);
-        case 2:
-            return //a faire
-    }
+    (async () => {
+        const type = await checkTokenType(config.token);
+        switch(type){
+            default:
+                return connectBot()
+            case 1:
+                return selfbot_main(config.token);
+            case 2:
+                return //a faire
+        }
+    })()
 }
 
 
@@ -48,13 +49,12 @@ function selfbot_main(token){
     let counter = 0;
 
     logo();
-    console.log(gradient(color())('\n>> Connexion en cours'));
-
+    console.log('\n\n\n\n')
     const connexion_interval = setInterval(() => {
         dots = '.'.repeat(counter % 4);
-        process.stdout.write(`\r>> Connexion en cours${dots}   `);
+        process.stdout.write(gradient(color())(`\r${' '.repeat(spaces)}Connexion en cours${dots}   `));
         counter++;
-    }, 500);
+    }, 250);
 
     const client = new Selfbot.Client({ presence: { status: 'invisible' } });
     client.login(token);
@@ -64,6 +64,7 @@ function selfbot_main(token){
         main_selfbot(client);
     });
 }
+
 
 
 
@@ -83,39 +84,41 @@ function main_selfbot(client){
     logo();
 
     console.log(gradient(color())(`    
-                        [1]  - Créé Une Backup
-                        [2]  - Créé Une Backup (Sans Chargement)
-                        [3]  - Créé Une Backup Des Emotes
-                        [4]  - Télécharger des emotes
-                        [5]  - Créé Une Backup (Avec les Messages)
-                        [6]  - Charger une Backup
-                        [7]  - Supprime Les Tickets (Par nom)
-                        [8]  - Supprime Les Tickets (d'une Categorie)
-                        [9]  - Créé Un Modèle (Besoin de Permissions)
-                        [10] - Affiche La Liste Des Backups
-                        [11] - Settings
-                        [0]  - Fermer`
+${' '.repeat(spaces)}[1]  - Créé Une Backup
+${' '.repeat(spaces)}[2]  - Créé Une Backup (Sans Chargement)
+${' '.repeat(spaces)}[3]  - Créé Une Backup Des Emotes
+${' '.repeat(spaces)}[4]  - Télécharger des emotes
+${' '.repeat(spaces)}[5]  - Créé Une Backup (Avec les Messages)
+${' '.repeat(spaces)}[6]  - Charger une Backup
+${' '.repeat(spaces)}[7]  - Supprime Les Tickets (Par nom)
+${' '.repeat(spaces)}[8]  - Supprime Les Tickets (d'une Categorie)
+${' '.repeat(spaces)}[9]  - Créé Un Modèle (Besoin de Permissions)
+${' '.repeat(spaces)}[10] - Affiche La Liste Des Backups
+${' '.repeat(spaces)}[11] - Settings
+${' '.repeat(spaces)}[0]  - Fermer`
     ))
   
-    input.question(gradient(color())("Quel est votre Choix ? : "), async choix_menu => {
+    input.question(gradient(color())(`\n\n${' '.repeat(spaces)}Quel est votre Choix ? : `), async choix_menu => {
 
-        switch(choix_menu){
+        switch(parseInt(choix_menu)){
             default:
-                console.log(gradient(color())("[!] Choix Invalide"));
+                console.log(gradient(color())(' '.repeat(spaces) + "[!] Choix Invalide"));
                 await sleep(2000);
                 main_selfbot(client);  
                 break;
 
             case 0:
                 logo();
-                console.log(gradient(color())(`\n\nMerci d'avoir utilisé mon tool`));
+                console.log(gradient(color())(`\n\n${' '.repeat(spaces)}Merci d'avoir utilisé mon tool`));
                 input.close();
                 process.exit(0);
 
             case 1:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
+
+                    console.log(gradient(color())(' '.repeat(spaces) + `Création de la backup de ${guild.name} en cours..`))
 
                     const created_backup = await selfbot_backup
                         .create(guild, { maxMessagesPerChannel: 0, doNotBackup: [ 'bans', 'emojis' ] })
@@ -126,29 +129,31 @@ function main_selfbot(client){
                     const new_guild = await client.guilds.create(guild.name).catch(() => false);
                     if (!new_guild) return error('Création de serveur impossible');
 
-                    console.log(gradient(color())(`Chargement de la backup de ${guild.name} en cours..`))
+                    console.log(gradient(color())(' '.repeat(spaces) + `Chargement de la backup de ${guild.name} en cours..`))
                     await selfbot_backup.load(created_backup, new_guild);
                     main_selfbot(client);
                 })
                 break;
 
             case 2:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
+
+                    console.log(gradient(color())(' '.repeat(spaces) + `Création de la backup de ${guild.name} en cours..`))
 
                     const created_backup = await selfbot_backup
                         .create(guild, { maxMessagesPerChannel: 0, doNotBackup: [ 'bans', 'emojis' ] })
                         .catch(() => null);
 
                     if (!created_backup) return error("Création de la backup impossible");
-                    input.question(gradient(color()(`Backup du serveur ${guild.name} crée: ${created_backup.id}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                    input.question(gradient(color())(' '.repeat(spaces) + `Backup du serveur ${guild.name} crée: ${created_backup.id}\n${' '.repeat(spaces)}Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                 })
                 break;
 
             case 3:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
                     const emojis = await guild.emojis.fetch().catch(() => null);
@@ -164,20 +169,24 @@ function main_selfbot(client){
                     }
 
                     fs.writeFileSync(`./backups/selfbot/emojis/${data.id}.json`, JSON.stringify(data, null, 4));
-                    input.question(gradient(color()(`Backup des emojis du serveur ${guild.name} crée: ${data.id}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                    input.question(gradient(color())(' '.repeat(spaces) + `Backup des emojis du serveur ${guild.name} crée: ${data.id}\n${' '.repeat(spaces)}Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                 })
                 break;
 
             case 4:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
                     const emojis = await guild.emojis.fetch().catch(() => null);
                     if (!emojis) return error("Impossible de récupérer les emojis du serveur");
                     if (!emojis.size) return error(`${guild.name} n'a aucun emoji`);
 
-                    fs.mkdirSync(guild.name);
+                    if (!fs.existsSync(guild.name)) 
+                        fs.mkdirSync(guild.name);
+
+                    console.log(gradient(color())(' '.repeat(spaces) + `Création de la backup des emojis de ${guild.name} en cours..`))
+
                     for (const emoji of guild.emojis.cache.values()) {
 
                         const response = await fetch(`https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}`).catch(() => false);
@@ -186,21 +195,25 @@ function main_selfbot(client){
                         await pipelineAsync(response.body, fs.createWriteStream(`./${guild.name}/${emoji.name}.${emoji.animated ? 'gif' : 'png'}`));        
                     }
 
-                    input.question(gradient(color()(`Téléchargement des emojis du serveur ${guild.name} crée\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                    input.question(gradient(color())(' '.repeat(spaces) + `Téléchargement des emojis du serveur ${guild.name} crée\n${' '.repeat(spaces)}Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                 })
                 break;
 
             case 5:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
-                    input.question(gradient(color())(`Combien de messages par salons voulez-vous (max 100) : `), async maxMessagesPerChannel => {
-                        if (typeof maxMessagesPerChannel !== "number" || maxMessagesPerChannel < 0 || maxMessagesPerChannel > 100) 
+                    input.question(gradient(color())(' '.repeat(spaces) + `Combien de messages par salons voulez-vous (max 100) : `), async maxMessagesPerChannel => {
+                        const number = parseInt(maxMessagesPerChannel);
+
+                        if (number < 0 || number > 100) 
                             return error("Veuillez entrer un nombre valide entre 0 et 100");
 
+                        console.log(gradient(color())(' '.repeat(spaces) + `Création de la backup de ${guild.name} avec ${number} messages par salons en cours..`))
+
                         const created_backup = await selfbot_backup
-                            .create(guild, { maxMessagesPerChannel, doNotBackup: [ 'bans', 'emojis' ] })
+                            .create(guild, { maxMessagesPerChannel: number, doNotBackup: [ 'bans', 'emojis' ] })
                             .catch(() => null);
 
                         if (!created_backup) return error("Création de la backup impossible");
@@ -208,7 +221,7 @@ function main_selfbot(client){
                         const new_guild = await client.guilds.create(guild.name).catch(() => false);
                         if (!new_guild) return error('Création de serveur impossible');
 
-                        console.log(gradient(color())(`Chargement de la backup de ${guild.name} en cours..`))
+                        console.log(gradient(color())(' '.repeat(spaces) + `Chargement de la backup de ${guild.name} en cours..`))
                         await selfbot_backup.load(created_backup, new_guild);
                         main_selfbot(client);
                     })
@@ -216,16 +229,16 @@ function main_selfbot(client){
                 break;
 
             case 6:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
-                    input.question(gradient(color())(`Entrez l'ID de la backup : `), async backupId => {
+                    input.question(gradient(color())(' '.repeat(spaces) + `Entrez l'ID de la backup : `), async backupId => {
                         if (fs.existsSync(`./backups/selfbot/emojis/${backupId}.json`)){
                             if (!guild.members.me.permissions.has("CREATE_GUILD_EXPRESSIONS"))
                                 return error("Vous n'avez pas les permissions requises");
 
-                            input.question(gradient(color())("Voulez vous supprimer les emojis (y/n) : "), async delete_emoji => {
+                            input.question(gradient(color())(' '.repeat(spaces) + "Voulez vous supprimer les emojis (y/n) : "), async delete_emoji => {
                                 if (delete_emoji && delete_emoji.toLowerCase() == 'y')
                                     guild.emojis.cache.forEach(emoji => emoji.delete().catch(() => false));
 
@@ -233,31 +246,31 @@ function main_selfbot(client){
                                 for (const emoji of emojiData.emojis.values()){
                                     try {
                                         await guild.emojis.create(emoji.link, emoji.name);
-                                        console.log(gradient(color())(`Emoji ${emoji.name} crée`))
+                                        console.log(gradient(color())(' '.repeat(spaces) + `Emoji ${emoji.name} crée`))
                                         await sleep(500);
-                                    } catch (e) { console.log(gradient(color())(`Emoji ${emoji.name} non effectuée: ${e}`)) }
+                                    } catch (e) { console.log(gradient(color())(' '.repeat(spaces) + `Emoji ${emoji.name} non effectuée: ${e}`)) }
                                 }
-                                input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                                input.question(gradient(color())(' '.repeat(spaces) + `Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                             })
                         }
                         else if (fs.existsSync(`./backups/selfbot/serveurs/${backupId}.json`)){
                             if (!guild.members.me.permissions.has("ADMINISTRATOR"))
                                 return error("Vous n'avez pas les permissions requises");
 
-                            console.log(gradient(color())(`Chargement de la backup en cours...`));
+                            console.log(gradient(color())(' '.repeat(spaces) + `Chargement de la backup en cours...`));
                             await selfbot_backup.load(backupId, guild);
-                            input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                            input.question(gradient(color())(' '.repeat(spaces) + `Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                         }
                     })
                 })
                 break;
 
             case 7:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
-                    input.question(gradient(color())(`Entrez le nom des salons à supprimer : `), async channelName => {
+                    input.question(gradient(color())(' '.repeat(spaces) + `Entrez le nom des salons à supprimer : `), async channelName => {
                         
                         if (!channelName)
                             return error("Veuillez entrer un nom de salon valide");
@@ -268,20 +281,20 @@ function main_selfbot(client){
                         for (const channel of guild.channels.cache.filter(c => c.name.toLowerCase().includes(channelName.toLowerCase())).values()){
                             try {
                                 await channel.delete()
-                                console.log(gradient(color())(`${channel.name} a été supprimé`))
-                            } catch (e) { console.log(gradient(color())(`${channel.name} n'a pas pu être supprimé: ${e}`)) }
+                                console.log(gradient(color())(' '.repeat(spaces) + `${channel.name} a été supprimé`))
+                            } catch (e) { console.log(gradient(color())(' '.repeat(spaces) + `${channel.name} n'a pas pu être supprimé: ${e}`)) }
                         }
-                        input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                        input.question(gradient(color())(' '.repeat(spaces) + `Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                     })
                 })
                 break;
 
             case 8:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
-                    input.question(gradient(color())(`Entrez l'ID de la catégorie : `), async channel_id => {
+                    input.question(gradient(color())(' '.repeat(spaces) + `Entrez l'ID de la catégorie : `), async channel_id => {
                         
                         if (!channel_id)
                             return error("Veuillez entrer un ID de catégorie valide");
@@ -303,48 +316,53 @@ function main_selfbot(client){
                         for (const channel of categorie.children.values()){
                             try {
                                 await channel.delete()
-                                console.log(gradient(color())(`${channel.name} a été supprimé`))
+                                console.log(gradient(color())(' '.repeat(spaces) + `${channel.name} a été supprimé`))
                             } catch (e) { console.log(gradient(color())(`${channel.name} n'a pas pu être supprimé: ${e}`)) }
                         }
-                        input.question(gradient(color()(`Appuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                        input.question(gradient(color())(' '.repeat(spaces) + `Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                     })
                 })
                 break;
 
             case 9:
-                input.question(gradient(color())(`Entrez votre ID de serveur : `), async server_id => {
-                    const guild = client.guilds.cache.get(server_id) || client.guilds.fetch(server_id).catch(() => null);
+                input.question(gradient(color())(' '.repeat(spaces) + `Entrez votre ID de serveur : `), async server_id => {
+                    const guild = client.guilds.cache.get(server_id) || await client.guilds.fetch(server_id).catch(() => null);
                     if (!guild) return error("Aucun serveur de trouvé");
 
                     if (!guild.members.me.permissions.has("MANAGE_GUILD"))
                         return error("Vous n'avez pas les permissions requises");
 
                     let template = await guild.createTemplate(guild.name, `https://github.com/002-sans/Discord-Backup-Tool-V3`).catch(() => null);
-                    if (!template) template = await guild.fetchTemplates().catch(() => null);
+                    if (!template) template = await guild.fetchTemplates().then(r => r.first()).catch(() => null);
 
-                    input.question(gradient(color()(`Template crée: ${template?.url ?? 'url non crée'}\nAppuyez sur entrer pour continuer`)), () => main_selfbot(client));
+                    input.question(gradient(color())(' '.repeat(spaces) + `Template crée: ${template?.url ?? 'url non crée'}\n${' '.repeat(spaces)}Appuyez sur entrer pour continuer`), () => main_selfbot(client));
                 })
                 break;
 
             case 10:
                 const list = await selfbot_backup.list();
 
-                const backupFetched = await Promise.all(list.map(id => backup.fetch(id)));
+                const backupFetched = await Promise.all(list.map(id => selfbot_backup.fetch(id)));
 
                 const backupInfos = backupFetched
                     .sort((a, b) => a.data.name.localeCompare(b.data.name))
-                    .map(e => `\`${e.data.name}\` ➜ ${e.id}`)
+                    .map(e => ' '.repeat(spaces) + `${e.data.name} ➜ ${e.id}`)
                     .join('\n');
 
-                const backupemotes = fs.readdirSync('./emotes/')
+                const backupemotes = fs.readdirSync('./backups/selfbot/emojis/')
                     .filter(file => file.endsWith('.json'))
                     .map(file => {
-                        const { name, id } = require(`./emotes/${file}`);
-                        return `${name} ➜ ${id}`;
+                        const { name, id } = require(`./backups/selfbot/emojis/${file}`);
+                        return ' '.repeat(spaces) + `${name} ➜ ${id}`;
                     })
                     .join('\n');
 
-                console.log(gradient(color())(`Backups Serveurs: \n${backupInfos}\n\nBackups Emojis: ${backupemotes}`));
+                console.log(gradient(color())(' '.repeat(spaces) + `Backups Serveurs: \n${backupInfos}\n\n${' '.repeat(spaces)}Backups Emojis: ${backupemotes}`));
+                input.question(gradient(color())(' '.repeat(spaces) + `Appuyez sur entrer pour continuer`), () => main_selfbot(client));
+                break;
+
+            case 11:
+                settings_menu(client);
                 break;
         }
 
@@ -356,9 +374,35 @@ function main_selfbot(client){
          * @example error("Just an error");
         */
         async function error(error){
-            console.log(gradient(color())(error));
+            console.log(gradient(color())(' '.repeat(spaces) + error));
             await sleep(2000);
             return main_selfbot(client);
+        }
+    })
+}
+
+/**
+ * @param {Selfbot.Client} client The client of the selfbot
+ * @description The main function of the selfbot's Client
+ * @example settings_menu(client);
+*/
+function settings_menu(client){
+    logo();
+
+    console.log(gradient(color())(`    
+${' '.repeat(spaces)}[1]  - Changer la couleur en jaune
+${' '.repeat(spaces)}[2]  - Changer la couleur en orange
+${' '.repeat(spaces)}[3]  - Changer la couleur en cyan
+${' '.repeat(spaces)}[4]  - Changer la couleur en rouge
+${' '.repeat(spaces)}[5]  - Changer la couleur en rose
+${' '.repeat(spaces)}[6]  - Changer la couleur en vert
+${' '.repeat(spaces)}[7]  - Changer la couleur en bleu
+${' '.repeat(spaces)}[0]  - Retour`
+    ))
+  
+    input.question(gradient(color())(`\n\n${' '.repeat(spaces)}Quel est votre Choix ? : `), async choix_menu => {
+        switch(parseInt(choix_menu)){
+
         }
     })
 }
@@ -437,13 +481,6 @@ async function connectBot() {
                 selfbot_main(token);
                 break;
 
-            case 2:
-                console.log(gradient(color())("[INFO] Token bot valide."));
-                config.token = token;
-                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
-                // Ajoute ici ton bot_main() si tu as une fonction dédiée pour bots
-                break;
-
             default:
                 console.log(gradient(color())("[ERREUR] Token invalide."));
                 await sleep(2000);
@@ -469,13 +506,6 @@ async function checkTokenType(token) {
         });
 
         if (res.ok) return 1;
-
-        res = await fetch(api, {
-            headers: { 'Authorization': `Bot ${token}` }
-        });
-
-        if (res.ok) return 2;
-
         return 0;
     } catch (err) {
         console.error("[ERREUR] Une erreur s'est produite :", err.message);
