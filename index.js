@@ -402,7 +402,51 @@ ${' '.repeat(spaces)}[0]  - Retour`
   
     input.question(gradient(color())(`\n\n${' '.repeat(spaces)}Quel est votre Choix ? : `), async choix_menu => {
         switch(parseInt(choix_menu)){
+            case 1:
+                config.color = 'yellow';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
 
+            case 2:
+                config.color = 'orange';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
+
+            case 3:
+                config.color = 'cyan';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
+
+            case 4:
+                config.color = 'red';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
+
+            case 5:
+                config.color = 'pink';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
+
+            case 6:
+                config.color = 'green';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
+
+            case 7:
+                config.color = 'blue';
+                fs.writeFileSync('./config.json', JSON.stringify(config, null, 4));
+                settings_menu(client);
+                break;
+
+            case 8:
+                main_selfbot(client);
+                break;
         }
     })
 }
