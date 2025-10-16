@@ -444,7 +444,7 @@ ${' '.repeat(spaces)}[0]  - Retour`
                 settings_menu(client);
                 break;
 
-            case 8:
+            case 0:
                 main_selfbot(client);
                 break;
         }
