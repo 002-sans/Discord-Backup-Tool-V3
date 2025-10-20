@@ -1,3 +1,11 @@
+const fs = require('node:fs');
+const spaces = 44;
+
+try {
+    const temp = require('./config.json');
+    delete require.cache(temp);
+} catch { fs.writeFileSync('./config.json', JSON.stringify({ "token": null, "language": "fr", "color": "green"})) }
+
 const { pipeline } = require('node:stream');
 const { promisify } = require('node:util');
 const pipelineAsync = promisify(pipeline);
@@ -11,8 +19,6 @@ const gradient = require('gradient-string');
 const readline = require("node:readline");
 const input = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-const fs = require('node:fs');
-const spaces = 44;
 
 //const fetch = require('node-fetch') // If you wanna activate node-fetch and do NPM I NODE-FETCH@cjs remove the first // in this line
 
@@ -444,7 +450,7 @@ ${' '.repeat(spaces)}[0]  - Retour`
                 settings_menu(client);
                 break;
 
-            case 8:
+            case 0:
                 main_selfbot(client);
                 break;
         }
@@ -556,3 +562,17 @@ async function checkTokenType(token) {
         return 0;
     }
 }
+
+// gestion des erreurs
+async function errorHandler(error) {
+    // erreurs ignorées
+    if (error.code == 10008) return; // Unknown Message
+    if (error.code == 10062) return; // Unknown interaction
+    if (error.code == 40060) return; // Interaction has already been acknowledged
+
+    console.log(error);
+    console.log(`[ERROR] ${error}`);
+};
+
+process.on("unhandledRejection", errorHandler);
+process.on("uncaughtException", errorHandler);
